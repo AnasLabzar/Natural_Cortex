@@ -3,46 +3,40 @@ import pandas as pd
 
 class BinanceTestnetClient:
     def __init__(self):
-        # L'URL officielle dyal Spot Testnet (Gratuit w sans limites)
         self.base_url = "https://testnet.binance.vision/api/v3"
 
-    def get_historical_data(self, symbol="PAXGUSDT", interval="15m", limit=100):
-        """
-        Ktjib les bougies (OHLCV) mn Binance Testnet w katrdhom DataFrame n9i.
-        """
+    def fetch_ohlcv(self, symbol="PAXGUSDT", interval="15m", limit=15):
+        """Fonction basique bach tjib ay timeframe"""
         endpoint = f"{self.base_url}/klines"
-        params = {
-            "symbol": symbol,
-            "interval": interval,
-            "limit": limit
-        }
+        params = {"symbol": symbol, "interval": interval, "limit": limit}
 
         try:
-            # 1. Nssifto la requête l'Broker
             response = requests.get(endpoint, params=params)
-            response.raise_for_status() # Katw9ef l'code ila kan chi erreur 404 wla 500
+            response.raise_for_status()
             data = response.json()
 
-            # 2. Nformatiw data l'wa7d tableau mnadem (DataFrame)
             columns = ['timestamp', 'open', 'high', 'low', 'close', 'volume', 
-                       'close_time', 'quote_asset_volume', 'number_of_trades', 
-                       'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore']
-            
+                       'close_time', 'qav', 'num_trades', 'tbbav', 'tbqav', 'ignore']
             df = pd.DataFrame(data, columns=columns)
-
-            # 3. Nn9iw l'Data (Clean-up)
-            # Nbadlo l'wa9t mn Milliseconds l'Date ma9rou2a
-            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             
-            # Nredou les prix b format a3dad 3achariya (Float) machi texte
+            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             numeric_cols = ['open', 'high', 'low', 'close', 'volume']
             df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric, axis=1)
 
-            # 4. Nkhlliw ghir dakchi li ghadi t7tajo l'IA (Open, High, Low, Close, Volume)
-            clean_df = df[['timestamp', 'open', 'high', 'low', 'close', 'volume']]
-            
-            return clean_df
-
-        except requests.exceptions.RequestException as e:
-            print(f"❌ Erreur f l'connexion m3a Binance: {e}")
+            return df[['timestamp', 'open', 'high', 'low', 'close', 'volume']]
+        except Exception as e:
+            print(f"❌ Erreur API: {e}")
             return None
+
+    def get_mtf_data(self, symbol="PAXGUSDT"):
+        """
+        Ktjib l'Matrix kamla: M15 l'Vison w M5 l'Confirmation
+        """
+        # Njbdo 10 bougies d M15 (2.5 sa3at dyal l'historique l'tendance)
+        m15_data = self.fetch_ohlcv(symbol, interval="15m", limit=10)
+        # Njbdo 6 bougies d M5 (Ness sa3a lakhera l'confirmation dkhoul)
+        m5_data = self.fetch_ohlcv(symbol, interval="5m", limit=6)
+        
+        if m15_data is not None and m5_data is not None:
+            return {"M15": m15_data, "M5": m5_data}
+        return None

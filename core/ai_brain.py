@@ -18,50 +18,57 @@ class OpenClawBrain:
         # Nkhdmo b l'modèle jdid
         self.model_id = 'gemini-2.5-flash'
 
-    def analyze_market(self, df):
+    def analyze_market(self, mtf_data):
         """
-        Katchd l'Dataframe dyal les prix w katsiftha l'IA bach t'analysiha.
+        L'IA kat-analysi l'marché b stratégie ICT (Inner Circle Trader)
         """
-        # Nredou l'Dataframe l'texte (String) bach tfhmo l'IA
-        market_data_str = df.to_string(index=False)
+        # N-formatiw data bjouj l'texte
+        m15_str = mtf_data["M15"].to_string(index=False)
+        m5_str = mtf_data["M5"].to_string(index=False)
 
-        # Hada howa "Le Prompt Magique"
         prompt = f"""
-        You are 'OpenClaw', an elite quantitative trading AI agent.
-        Your objective is to analyze the following 15-minute candlestick data for PAXG/USDT (a proxy for XAU/USD Gold).
+        You are 'OpenClaw', an elite institutional quantitative algorithm based on ICT (Inner Circle Trader) and SMC (Smart Money Concepts) methodologies.
         
-        Market Data:
-        {market_data_str}
+        Analyze the following Gold (PAXG/USDT) Multi-Timeframe data:
+        
+        --- MACRO CONTEXT (M15 - 15 Minute Chart) ---
+        {m15_str}
+        
+        --- ENTRY CONFIRMATION (M5 - 5 Minute Chart) ---
+        {m5_str}
 
-        Analyze the price action, momentum, and volume. 
-        Provide a trading decision. You MUST respond strictly in valid JSON format with no markdown formatting or extra text.
-        
-        Use this exact JSON structure:
+        YOUR INSTRUCTIONS:
+        1. M15 Bias: Identify the overall institutional bias. Look for sweeps of liquidity (BSL/SSL) and Order Blocks.
+        2. M5 Trigger: Look for Market Structure Shifts (MSS) and Fair Value Gaps (FVG) aligning with the M15 bias.
+        3. REAL-TIME SCANNING: If the M5 timeframe does not show a clear, high-probability FVG or MSS *right now*, you MUST wait (HOLD).
+
+        Respond STRICTLY in valid JSON format with no markdown formatting or extra text:
         {{
             "decision": "BUY" | "SELL" | "HOLD",
             "confidence": <number between 0 and 100>,
-            "reasoning": "<short explanation of your analysis>"
+            "ict_context": {{
+                "m15_bias": "BULLISH" | "BEARISH" | "NEUTRAL",
+                "m5_trigger_found": "YES" | "NO",
+                "key_levels": "<mention any specific price level acting as FVG or OB>"
+            }},
+            "reasoning": "<Technical ICT explanation: mention liquidity sweeps, FVG, or MSS>"
         }}
         """
 
         try:
-            # La nouvelle syntaxe dyal generate_content f google-genai
             response = self.client.models.generate_content(
                 model=self.model_id,
                 contents=prompt
             )
             
-            # N-nettoyew la réponse
             response_text = response.text.strip()
             if response_text.startswith("```json"):
                 response_text = response_text[7:-3].strip()
             elif response_text.startswith("```"):
                 response_text = response_text[3:-3].strip()
 
-            # N-convertiw texte l'objet JSON
-            decision_json = json.loads(response_text)
-            return decision_json
+            return json.loads(response_text)
 
         except Exception as e:
             print(f"❌ Erreur f l'analyse dyal Gemini: {e}")
-            return None
+            return None 
